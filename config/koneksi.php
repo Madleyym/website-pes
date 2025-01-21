@@ -3,7 +3,7 @@
 $host = 'localhost'; // Nama host database
 $username = 'root';  // Username database
 $password = '';      // Password database
-$database = 'kisni'; // Nama database yang digunakan
+$database = 'admin_panel'; // Nama database yang digunakan
 
 // Membuat koneksi ke MySQL
 $conn = new mysqli($host, $username, $password, $database);
