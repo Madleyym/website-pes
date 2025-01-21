@@ -1,336 +1,369 @@
 <?php
 require_once '../config/koneksi.php';
 
+// Mengambil data statistik dari database
+$query_posts = mysqli_query($conn, "SELECT COUNT(*) AS total_posts FROM posts");
+$total_posts = mysqli_fetch_assoc($query_posts)['total_posts'];
+
+$query_comments = mysqli_query($conn, "SELECT COUNT(*) AS total_comments FROM comments");
+$total_comments = mysqli_fetch_assoc($query_comments)['total_comments'];
+
+$query_downloads = mysqli_query($conn, "SELECT COUNT(*) AS total_downloads FROM downloads");
+$total_downloads = mysqli_fetch_assoc($query_downloads)['total_downloads'];
+
+$query_users = mysqli_query($conn, "SELECT COUNT(*) AS active_users FROM tbl_user WHERE level = 'user'");
+$total_users = mysqli_fetch_assoc($query_users)['active_users'];
+
+// Mengambil data post terbaru
+$query_recent_posts = mysqli_query($conn, "SELECT * FROM posts ORDER BY post_date DESC LIMIT 5");
+
+// Cek apakah query recent_posts berhasil dieksekusi
+if (!$query_recent_posts) {
+    die("Query gagal dieksekusi: " . mysqli_error($conn));
+}
+
+// // Menampilkan post terbaru
+// while ($post = mysqli_fetch_assoc($query_recent_posts)) {
+//     echo "<div>" . htmlspecialchars($post['title']) . "</div>";
+// }
+// 
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PesKisni Admin Panel</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #1a1a1a;
-            --secondary-color: #2196f3;
-            --accent-color: #00ff9d;
-            --text-light: #ffffff;
-            --danger-color: #dc3545;
-            --success-color: #28a745;
-            --warning-color: #ffc107;
-        }
+    <link href="../assets/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .admin-container {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-        }
-
-        /* Sidebar Styles */
-        .sidebar {
-            background: var(--primary-color);
-            height: 100vh;
-            position: fixed;
-            width: 250px;
-            padding: 1rem;
-        }
-
-        .sidebar h2 {
-            color: var(--text-light);
-            padding: 1rem;
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--accent-color);
-        }
-
-        .nav-menu {
-            list-style: none;
-        }
-
-        .nav-menu li {
-            margin-bottom: 0.5rem;
-        }
-
-        .nav-menu a {
-            color: var(--text-light);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-menu a:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-menu i {
-            margin-right: 0.75rem;
-            width: 20px;
-            text-align: center;
-        }
-
-        /* Main Content Styles */
-        .main-content {
-            margin-left: 250px;
-            padding: 2rem;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .page-header h1 {
-            font-size: 1.75rem;
-            color: #333;
-        }
-
-        .page-header span {
-            color: #666;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            position: relative;
-        }
-
-        .stat-card h3 {
-            color: #666;
-            font-size: 1rem;
-            font-weight: 500;
-            margin-bottom: 1rem;
-        }
-
-        .stat-number {
-            font-size: 1.75rem;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .stat-icon {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            font-size: 1.5rem;
-            color: #2196f3;
-            opacity: 0.8;
-        }
-
-        /* Recent Posts Table */
-        .recent-posts {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .recent-posts h2 {
-            font-size: 1.25rem;
-            color: #333;
-            margin-bottom: 1.5rem;
-        }
-
-        .content-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .content-table th {
-            background: #f8f9fa;
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            color: #333;
-            border-bottom: 2px solid #eee;
-        }
-
-        .content-table td {
-            padding: 1rem;
-            border-bottom: 1px solid #eee;
-            color: #666;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 50px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        .status-published {
-            background: var(--success-color);
-            color: white;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .edit-button {
-            background: var(--secondary-color);
-            color: white;
-        }
-
-        .delete-button {
-            background: var(--danger-color);
-            color: white;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-
-        @media (max-width: 1200px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .admin-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                display: none;
-            }
-            
-            .main-content {
-                margin-left: 0;
-                padding: 1rem;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
 </head>
+
 <body>
-    <div class="admin-container">
+    <div class="wrapper">
+        <!-- Sidebar -->
         <aside class="sidebar">
-            <h2>PesKisni</h2>
-            <ul class="nav-menu">
-                <li><a href="dashboard.php"><i class="fas fa-home"></i>Dashboard</a></li>
-                <li><a href="posts.php"><i class="fas fa-newspaper"></i>Manage Posts</a></li>
-                <li><a href="categories.php"><i class="fas fa-folder"></i>Categories</a></li>
-                <li><a href="comments.php"><i class="fas fa-comments"></i>Comments</a></li>
-                <li><a href="media.php"><i class="fas fa-images"></i>Media Library</a></li>
-                <li><a href="users.php"><i class="fas fa-users"></i>Users</a></li>
-                <li><a href="settings.php"><i class="fas fa-cog"></i>Settings</a></li>
-                <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i>Logout</a></li>
-            </ul>
+            <div class="d-flex flex-column h-100">
+                <div class="p-3 border-bottom border-secondary">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-cogs text-white me-2" style="font-size: 40px;"></i>
+                        <h2 class="h5 text-white mb-0">PES-KISNI</h2>
+                    </div>
+                </div>
+
+
+                <nav class="nav-menu p-3 flex-grow-1">
+                    <div class="nav flex-column">
+                        <a href="dashboard.php" class="nav-link active">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                        <a href="posts.php" class="nav-link">
+                            <i class="fas fa-newspaper"></i> Manage Posts
+                        </a>
+                        <a href="categories.php" class="nav-link">
+                            <i class="fas fa-folder"></i> Categories
+                        </a>
+                        <a href="comments.php" class="nav-link">
+                            <i class="fas fa-comments"></i> Comments
+                        </a>
+                        <a href="media.php" class="nav-link">
+                            <i class="fas fa-images"></i> Media Library
+                        </a>
+                        <a href="users.php" class="nav-link">
+                            <i class="fas fa-users"></i> Users
+                        </a>
+                        <a href="settings.php" class="nav-link">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                        <a href="../index.php" class="nav-link">
+                            <i class="fas fa-globe"></i> PES Kisni
+                        </a>
+
+                    </div>
+                </nav>
+
+                <div class="p-3 border-top border-secondary">
+                    <div class="d-flex align-items-center">
+                        <!-- <img src="path/to/avatar.png" alt="User" class="rounded-circle me-2" width="32" height="32"> -->
+                        <div class="text-white">
+                            <small class="d-block">Logged in as</small>
+                            <span class="fw-bold">
+                                <i class="fas fa-user-shield me-2"></i>Admin
+                            </span>
+                        </div>
+
+                        <a href="auth/logout.php" class="btn btn-outline-light btn-sm ms-auto">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </aside>
 
+        <!-- Main Content -->
         <main class="main-content">
-            <div class="page-header">
-                <h1>Dashboard</h1>
-                <span><?php echo date('l, d F Y'); ?></span>
-            </div>
+            <!-- Top Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+                <div class="container-fluid">
+                    <button class="btn btn-link sidebar-toggler">
+                        <i class="fas fa-bars"></i>
+                    </button>
 
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total Posts</h3>
-                    <p class="stat-number"><?php echo isset($totalPosts) ? number_format($totalPosts) : '245'; ?></p>
-                    <i class="fas fa-newspaper stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <h3>Total Comments</h3>
-                    <p class="stat-number"><?php echo isset($totalComments) ? number_format($totalComments) : '1,234'; ?></p>
-                    <i class="fas fa-comments stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <h3>Total Downloads</h3>
-                    <p class="stat-number"><?php echo isset($totalDownloads) ? number_format($totalDownloads) : '5,678'; ?></p>
-                    <i class="fas fa-download stat-icon"></i>
-                </div>
-                <div class="stat-card">
-                    <h3>Active Users</h3>
-                    <p class="stat-number">892</p>
-                    <i class="fas fa-users stat-icon"></i>
-                </div>
-            </div>
+                    <form class="d-flex ms-auto me-3">
+                        <div class="input-group">
+                            <input type="search" class="form-control" placeholder="Search...">
+                            <button class="btn btn-outline-secondary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
 
-            <div class="recent-posts">
-                <h2>Recent Posts</h2>
-                <table class="content-table">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Category</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Views</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>New Face Pack 2024</td>
-                            <td><i class="fas fa-folder"></i> Face Packs</td>
-                            <td><i class="far fa-calendar"></i> 2024-01-20</td>
-                            <td><span class="status-badge status-published">Published</span></td>
-                            <td>1,234</td>
-                            <td class="action-buttons">
-                                <button class="btn edit-button"><i class="fas fa-edit"></i> Edit</button>
-                                <button class="btn delete-button"><i class="fas fa-trash"></i> Delete</button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Latest Patch Update</td>
-                            <td><i class="fas fa-folder"></i> Patches</td>
-                            <td><i class="far fa-calendar"></i> 2024-01-19</td>
-                            <td><span class="status-badge status-published">Published</span></td>
-                            <td>2,156</td>
-                            <td class="action-buttons">
-                                <button class="btn edit-button"><i class="fas fa-edit"></i> Edit</button>
-                                <button class="btn delete-button"><i class="fas fa-trash"></i> Delete</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <div class="dropdown">
+                        <button class="btn btn-link text-dark dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge bg-danger">3</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <h6 class="dropdown-header">Notifications</h6>
+                            <a class="dropdown-item" href="#">
+                                <small class="text-muted">Just now</small>
+                                <p class="mb-0">New comment on "Latest Patch Update"</p>
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <small class="text-muted">30 minutes ago</small>
+                                <p class="mb-0">New user registration</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Page Content -->
+            <div class="container-fluid p-4">
+                <!-- Header -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h1 class="h3 mb-0">Dashboard Overview</h1>
+                            <div class="btn-group">
+                                <button class="btn btn-outline-secondary">
+                                    <i class="fas fa-download me-1"></i> Export
+                                </button>
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i> New Post
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row g-4 mb-4">
+                    <!-- Total Posts -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-2">Total Posts</h6>
+                                        <h4 class="mb-0"><?php echo $total_posts; ?></h4>
+                                        <small class="text-success">
+                                            <i class="fas fa-arrow-up"></i> 12.5%
+                                        </small>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-3">
+                                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                                            <i class="fas fa-newspaper text-primary"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Total Comments -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-2">Total Comments</h6>
+                                        <h4 class="mb-0"><?php echo $total_comments; ?></h4>
+                                        <small class="text-danger">
+                                            <i class="fas fa-arrow-down"></i> 5.2%
+                                        </small>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-3">
+                                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                                            <i class="fas fa-comments text-info"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Downloads -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-2">Downloads</h6>
+                                        <h4 class="mb-0"><?php echo $total_downloads; ?></h4>
+                                        <small class="text-success">
+                                            <i class="fas fa-arrow-up"></i> 8.4%
+                                        </small>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-3">
+                                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                                            <i class="fas fa-download text-warning"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Users -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card stat-card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="text-muted mb-2">Active Users</h6>
+                                        <h4 class="mb-0"><?php echo $total_users; ?></h4>
+                                        <small class="text-success">
+                                            <i class="fas fa-arrow-up"></i> 3.2%
+                                        </small>
+                                    </div>
+                                    <div class="flex-shrink-0 ms-3">
+                                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                                            <i class="fas fa-users text-success"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Posts Table -->
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white">
+                                <h5 class="card-title mb-0">Recent Posts</h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Title</th>
+                                                <th>Category</th>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                                <th>Views</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php while ($post = mysqli_fetch_assoc($query_recent_posts)) { ?>
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <!-- Pastikan path gambar thumb sesuai -->
+                                                            <img src="path/to/post-thumb.jpg" alt="Post" class="rounded me-2" width="32" height="32">
+                                                            <div>
+                                                                <strong><?php echo htmlspecialchars($post['title']); ?></strong>
+                                                                <!-- Jika tidak ada author, bisa dihapus atau disesuaikan -->
+                                                                <small class="d-block text-muted">By Author (optional)</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary"><?php echo htmlspecialchars($post['category']); ?></span>
+                                                    </td>
+                                                    <td><?php echo date('Y-m-d', strtotime($post['post_date'])); ?></td>
+                                                    <td>
+                                                        <!-- Menampilkan status -->
+                                                        <span class="badge <?php echo $post['status'] == 'Published' ? 'bg-success' : 'bg-warning'; ?>">
+                                                            <?php echo htmlspecialchars($post['status']); ?>
+                                                        </span>
+                                                    </td>
+                                                    <td><?php echo htmlspecialchars($post['views']); ?></td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <!-- Tombol Edit dan Delete -->
+                                                            <a href="edit_post.php?id=<?php echo $post['id']; ?>" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                            <a href="delete_post.php?id=<?php echo $post['id']; ?>" class="btn btn-sm btn-outline-danger">
+                                                                <i class="fas fa-trash"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php } ?>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Perbaiki script menjadi seperti ini
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const sidebarToggler = document.querySelector('.sidebar-toggler');
+            const mobileOverlay = document.createElement('div');
+            mobileOverlay.className = 'mobile-nav-overlay';
+            document.body.appendChild(mobileOverlay);
+
+            // Toggle sidebar
+            function toggleSidebar() {
+                sidebar.classList.toggle('show');
+                mobileOverlay.classList.toggle('show');
+                document.body.style.overflow = sidebar.classList.contains('show') ? 'hidden' : '';
+            }
+
+            // Event listeners
+            sidebarToggler.addEventListener('click', toggleSidebar);
+            mobileOverlay.addEventListener('click', toggleSidebar);
+
+            // Close sidebar on window resize if open
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 992 && sidebar.classList.contains('show')) {
+                    sidebar.classList.remove('show');
+                    mobileOverlay.classList.remove('show');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Close sidebar when clicking a nav link on mobile
+            const navLinks = document.querySelectorAll('.nav-menu .nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 992 && sidebar.classList.contains('show')) {
+                        toggleSidebar();
+                    }
+                });
+            });
+        });
+    </script>
 </body>
+
 </html>
